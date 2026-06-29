@@ -99,8 +99,9 @@
         let score = 0;
         let gameOver = false;
         let gameStarted = false; 
-        let currentDifficulty = 'medium'; // Tracks the active choice
+        let currentDifficulty = 'medium'; 
 
+        // Jump tracking
         let jumpCount = 0;
         const maxJumps = 2; 
 
@@ -110,8 +111,8 @@
             width: 30, 
             height: 30, 
             velocityY: 0, 
-            gravity: 1.2, 
-            jumpPower: -13 
+            gravity: 1.0, 
+            jumpPower: -12.5 // Adjusted jump height for better control
         };
         
         const obstacles = [];
@@ -125,6 +126,7 @@
                 if (gameOver) {
                     resetGame();
                 } else if (gameStarted && jumpCount < maxJumps) {
+                    // Instantly reset downward velocity so the second jump feels powerful
                     player.velocityY = player.jumpPower;
                     jumpCount++; 
                 }
@@ -133,17 +135,17 @@
 
         // --- GAME FUNCTIONS ---
         function startGame(difficulty) {
-            currentDifficulty = difficulty; // Save the choice for spawning rules
+            currentDifficulty = difficulty; 
 
             if (difficulty === 'easy') {
                 baseSpeed = 4;
-                player.gravity = 1.0; 
+                player.gravity = 0.8; // More airtime
             } else if (difficulty === 'medium') {
                 baseSpeed = 5.5;
-                player.gravity = 1.2; 
+                player.gravity = 1.0; // Standard physics
             } else if (difficulty === 'hard') {
                 baseSpeed = 7.5;
-                player.gravity = 1.5; 
+                player.gravity = 1.3; // Snappy, faster physics
             }
 
             startMenu.style.display = "none";
@@ -155,17 +157,13 @@
             let width = 20 + Math.random() * 20;
             let height = 30;
 
-            // NEW: Set block height rules based on your selected difficulty!
             if (currentDifficulty === 'easy') {
-                // Easy: Always short and simple blocks
                 height = 20 + Math.random() * 15; 
             } else if (currentDifficulty === 'medium') {
-                // Medium: Mix of a little short and a little tall
                 const isTall = Math.random() > 0.5;
-                height = isTall ? (45 + Math.random() * 15) : (25 + Math.random() * 15);
+                height = isTall ? (45 + Math.random() * 10) : (25 + Math.random() * 10);
             } else if (currentDifficulty === 'hard') {
-                // Hard: Mostly very tall blocks that demand double jumps
-                height = 65 + Math.random() * 20;
+                height = 60 + Math.random() * 15;
             }
             
             obstacles.push({ 
@@ -177,7 +175,6 @@
         }
 
         function spawnCoin() {
-            // Coins adapt to heights you can reach
             const isHigh = Math.random() > 0.5;
             const yPos = isHigh ? (40 + Math.random() * 30) : (120 + Math.random() * 40); 
             
@@ -207,10 +204,11 @@
             player.velocityY += player.gravity;
             player.y += player.velocityY;
 
+            // Strict floor boundary check
             if (player.y >= 200) {
                 player.y = 200;
                 player.velocityY = 0;
-                jumpCount = 0; 
+                jumpCount = 0; // Safely reset jumps on the ground
             }
 
             // 2. Update Obstacles
