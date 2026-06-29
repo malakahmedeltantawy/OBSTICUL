@@ -27,9 +27,9 @@
             border: 4px solid #333;
             box-shadow: 0 8px 16px rgba(0,0,0,0.2);
             border-radius: 8px;
+            outline: none; /* Removes the selection box */
         }
 
-        /* Menu Overlay Styles */
         .menu-overlay {
             position: absolute;
             top: 4px; 
@@ -97,15 +97,17 @@
             <button class="menu-btn" id="btn-char3" onclick="startGame('#6f42c1')">Purple Ninja</button>
         </div>
 
-        <canvas id="gameCanvas" width="600" height="250"></canvas>
+        <canvas id="gameCanvas" width="600" height="250" tabindex="1"></canvas>
     </div>
 
     <script>
-        // --- GAME SETUP ---
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const startMenu = document.getElementById("startMenu");
         const charMenu = document.getElementById("charMenu");
+
+        // Force the game window to listen to keys automatically
+        canvas.focus();
 
         let score = 0;
         let gameOver = false;
@@ -115,7 +117,6 @@
         let jumpCount = 0;
         const maxJumps = 2; 
 
-        // NEW: Added speedX to handle moving left and right
         const player = { 
             x: 50, 
             y: 200, 
@@ -124,11 +125,10 @@
             velocityY: 0, 
             gravity: 1.0, 
             jumpPower: -12.5,
-            moveSpeed: 5, 
+            moveSpeed: 6, // Slightly boosted speed for snappy dodge movement
             color: "#007BFF" 
         };
         
-        // NEW: Object to keep track of which movement keys are being held down
         const keysPressed = {
             left: false,
             right: false
@@ -140,7 +140,6 @@
         let baseSpeed = 5; 
 
         // --- GAME CONTROLS ---
-        // Tracks when a key is pressed down
         document.addEventListener("keydown", function(event) {
             if (event.code === "Space") {
                 if (gameOver) {
@@ -151,7 +150,6 @@
                 }
             }
             
-            // NEW: Detect Left / Right movement keys
             if (event.code === "ArrowLeft" || event.code === "KeyA") {
                 keysPressed.left = true;
             }
@@ -160,7 +158,6 @@
             }
         });
 
-        // NEW: Tracks when a key is released so movement stops
         document.addEventListener("keyup", function(event) {
             if (event.code === "ArrowLeft" || event.code === "KeyA") {
                 keysPressed.left = false;
@@ -170,7 +167,6 @@
             }
         });
 
-        // --- GAME FUNCTIONS ---
         function selectDifficulty(difficulty) {
             currentDifficulty = difficulty; 
 
@@ -193,6 +189,7 @@
             player.color = chosenColor;
             charMenu.style.display = "none";
             gameStarted = true;
+            canvas.focus(); // Re-focus canvas once menus are hidden
             resetGame();
         }
 
@@ -235,18 +232,19 @@
             score = 0;
             gameOver = false;
             player.y = 200;
-            player.x = 50; // Reset player position to the left side
+            player.x = 50; 
             player.velocityY = 0;
             jumpCount = 0; 
             gameSpeed = baseSpeed; 
             keysPressed.left = false;
             keysPressed.right = false;
+            canvas.focus();
         }
 
         function updateLogic() {
             if (!gameStarted || gameOver) return; 
 
-            // 1. Update Player Vertical Physics (Jumping)
+            // 1. Vertical Physics
             player.velocityY += player.gravity;
             player.y += player.velocityY;
 
@@ -256,7 +254,7 @@
                 jumpCount = 0; 
             }
 
-            // 2. NEW: Update Player Horizontal Physics (Moving Left & Right)
+            // 2. Horizontal Movement
             if (keysPressed.left) {
                 player.x -= player.moveSpeed;
             }
@@ -264,15 +262,11 @@
                 player.x += player.moveSpeed;
             }
 
-            // Stop the player from running off the edges of the game screen
-            if (player.x < 0) {
-                player.x = 0;
-            }
-            if (player.x > canvas.width - player.width) {
-                player.x = canvas.width - player.width;
-            }
+            // Boundary clamping
+            if (player.x < 0) player.x = 0;
+            if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
 
-            // 3. Update Obstacles
+            // 3. Obstacles
             for (let i = 0; i < obstacles.length; i++) {
                 obstacles[i].x -= gameSpeed;
 
@@ -284,7 +278,7 @@
                 }
             }
 
-            // 4. Update Coins 
+            // 4. Coins 
             for (let i = 0; i < coins.length; i++) {
                 coins[i].x -= gameSpeed;
 
@@ -305,17 +299,16 @@
                 }
             }
 
-            // 5. Score Points
+            // 5. Score
             if (obstacles.length > 0 && obstacles[0].x < -obstacles[0].width) {
                 obstacles.shift();
                 score += 10; 
-                
                 if (score % 50 === 0) {
                     gameSpeed += 0.5; 
                 }
             }
 
-            // 6. Spawn logic
+            // 6. Spawn timers
             if (Math.random() < 0.02) {
                 if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 250) {
                     spawnObstacle();
@@ -330,21 +323,21 @@
         function drawGraphics() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw Ground
+            // Ground
             ctx.fillStyle = "#555";
             ctx.fillRect(0, 230, canvas.width, 20);
 
-            // Draw Player
+            // Player
             ctx.fillStyle = player.color; 
             ctx.fillRect(player.x, player.y, player.width, player.height);
 
-            // Draw Obstacles
+            // Obstacles
             ctx.fillStyle = "#DC3545"; 
             for (let i = 0; i < obstacles.length; i++) {
                 ctx.fillRect(obstacles[i].x, obstacles[i].y, obstacles[i].width, obstacles[i].height);
             }
 
-            // Draw Coins
+            // Coins
             ctx.fillStyle = "#FFD700"; 
             for (let i = 0; i < coins.length; i++) {
                 ctx.beginPath();
@@ -353,7 +346,7 @@
                 ctx.closePath();
             }
 
-            // Draw Score
+            // Score
             ctx.fillStyle = "#333";
             ctx.font = "bold 20px sans-serif";
             ctx.fillText("Score: " + score, 20, 35);
