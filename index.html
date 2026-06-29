@@ -48,8 +48,21 @@
 
         .menu-overlay h1 {
             margin-top: 0;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             color: #FFD700;
+        }
+
+        /* Styling for the new rules list */
+        .menu-overlay ul {
+            text-align: left;
+            margin: 0 0 15px 0;
+            padding: 0 20px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .menu-overlay li {
+            margin-bottom: 5px;
         }
 
         .menu-btn {
@@ -83,7 +96,18 @@
 <body>
 
     <div id="gameContainer">
-        <div id="startMenu" class="menu-overlay">
+        <div id="rulesMenu" class="menu-overlay">
+            <h1>How to Play</h1>
+            <ul>
+                <li><strong>SPACEBAR:</strong> Jump (Press 2x in the air to Double Jump over tall <span style="color:#DC3545">Red</span> blocks!).</li>
+                <li><strong>LEFT / RIGHT Arrows (or A/D):</strong> Move sideways to slide through <span style="color:#E67E22">Orange</span> wall gaps.</li>
+                <li><strong>DOWN Arrow (or S):</strong> Duck on the ground to slide under <span style="color:#9B59B6">Purple</span> ceiling bars (Hard Mode).</li>
+                <li>Collect Gold Coins for a bonus <strong>+50 points</strong>!</li>
+            </ul>
+            <button class="menu-btn" onclick="showDifficultyMenu()">Next</button>
+        </div>
+
+        <div id="startMenu" class="menu-overlay" style="display: none;">
             <h1>Select Difficulty</h1>
             <button class="menu-btn" id="btn-easy" onclick="selectDifficulty('easy')">Easy</button>
             <button class="menu-btn" id="btn-medium" onclick="selectDifficulty('medium')">Medium</button>
@@ -103,6 +127,7 @@
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
+        const rulesMenu = document.getElementById("rulesMenu");
         const startMenu = document.getElementById("startMenu");
         const charMenu = document.getElementById("charMenu");
 
@@ -121,8 +146,8 @@
             y: 200, 
             width: 30, 
             height: 30, 
-            normalHeight: 30, // Save original size
-            duckHeight: 15,   // Ducking height
+            normalHeight: 30, 
+            duckHeight: 15,   
             velocityY: 0, 
             gravity: 1.0, 
             jumpPower: -12.5,
@@ -130,7 +155,6 @@
             color: "#007BFF" 
         };
         
-        // Updated to track left, right, and down (duck)
         const keysPressed = {
             left: false,
             right: false,
@@ -148,7 +172,6 @@
                 if (gameOver) {
                     resetGame();
                 } else if (gameStarted && jumpCount < maxJumps && !keysPressed.down) {
-                    // Can't jump while ducking
                     player.velocityY = player.jumpPower;
                     jumpCount++; 
                 }
@@ -160,7 +183,6 @@
             if (event.code === "ArrowRight" || event.code === "KeyD") {
                 keysPressed.right = true;
             }
-            // NEW: Listen for Duck Key
             if (event.code === "ArrowDown" || event.code === "KeyS") {
                 keysPressed.down = true;
             }
@@ -173,11 +195,18 @@
             if (event.code === "ArrowRight" || event.code === "KeyD") {
                 keysPressed.right = false;
             }
-            // NEW: Stop ducking when key is released
             if (event.code === "ArrowDown" || event.code === "KeyS") {
                 keysPressed.down = false;
             }
         });
+
+        // --- GAME FUNCTIONS ---
+        
+        // NEW: Moves player from Rules screen to Difficulty screen
+        function showDifficultyMenu() {
+            rulesMenu.style.display = "none";
+            startMenu.style.display = "flex";
+        }
 
         function selectDifficulty(difficulty) {
             currentDifficulty = difficulty; 
@@ -206,28 +235,24 @@
         }
 
         function spawnObstacle() {
-            // NEW: Hard mode splits obstacles evenly between jumping, dodging, and ducking!
             let obstaclePool = ['jump', 'dodge'];
             if (currentDifficulty === 'hard') {
                 obstaclePool.push('duck');
             }
 
-            // Pick a random obstacle type from the allowed pool
             const chosenType = obstaclePool[Math.floor(Math.random() * obstaclePool.length)];
 
             if (chosenType === 'duck' && currentDifficulty === 'hard') {
-                // Ceiling obstacle: Must press DOWN to slide underneath it
                 obstacles.push({
                     x: canvas.width,
-                    y: 0, // Starts at the very top of the screen
+                    y: 0, 
                     width: 40,
-                    height: 185, // Leaves exactly enough room to pass if ducking on the floor
+                    height: 185, 
                     type: 'duck',
-                    color: "#9B59B6" // Purple for ducking walls
+                    color: "#9B59B6" 
                 });
             } 
             else if (chosenType === 'dodge' && currentDifficulty !== 'easy') {
-                // Side dodge wall
                 const leaveGapOnLeft = Math.random() > 0.5;
                 let obstacleWidth = 420; 
                 let xPosition = leaveGapOnLeft ? 180 : 0; 
@@ -242,7 +267,6 @@
                 });
             } 
             else {
-                // Standard jump block
                 let width = 20 + Math.random() * 20;
                 let height = 30;
 
@@ -298,19 +322,15 @@
         function updateLogic() {
             if (!gameStarted || gameOver) return; 
 
-            // 1. Handle Ducking Mechanics
-            // If pressing down and on the ground, shrink the player
             if (keysPressed.down && player.y === 200) {
                 player.height = player.duckHeight;
             } else {
                 player.height = player.normalHeight;
             }
 
-            // 2. Vertical Physics
             player.velocityY += player.gravity;
             player.y += player.velocityY;
 
-            // Calculate current floor level based on height to prevent clipping
             let floorY = 230 - player.height;
             if (player.y >= floorY) {
                 player.y = floorY;
@@ -318,7 +338,6 @@
                 jumpCount = 0; 
             }
 
-            // 3. Horizontal Movement
             if (keysPressed.left) {
                 player.x -= player.moveSpeed;
             }
@@ -329,7 +348,6 @@
             if (player.x < 0) player.x = 0;
             if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
 
-            // 4. Obstacle Collision Loop
             for (let i = 0; i < obstacles.length; i++) {
                 obstacles[i].x -= gameSpeed;
 
@@ -341,7 +359,6 @@
                 }
             }
 
-            // 5. Update Coins 
             for (let i = 0; i < coins.length; i++) {
                 coins[i].x -= gameSpeed;
 
@@ -362,7 +379,6 @@
                 }
             }
 
-            // 6. Score tracking
             if (obstacles.length > 0 && obstacles[0].x < -600) { 
                 obstacles.shift();
                 score += 10; 
@@ -371,7 +387,6 @@
                 }
             }
 
-            // 7. Spawn timers
             if (Math.random() < 0.02) {
                 if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 280) {
                     spawnObstacle();
