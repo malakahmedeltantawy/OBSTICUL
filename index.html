@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Obstacle Game</title>
+    <style>
+        /* This section styles the page and centers the game screen */
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        canvas {
+            background-color: #ffffff;
+            border: 4px solid #333;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas" width="600" height="250"></canvas>
+
+    <script>
+        // --- GAME SETUP ---
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        let isJumping = false;
+        let score = 0;
+        let gameOver = false;
+
+        // The blue square you control
+        const player = { 
+            x: 50, 
+            y: 200, 
+            width: 30, 
+            height: 30, 
+            velocityY: 0, 
+            gravity: 1.2, 
+            jumpPower: -14 
+        };
+        
+        // The red blocks you have to jump over
+        const obstacles = [];
+        let gameSpeed = 5;
+
+        // --- GAME CONTROLS ---
+        // Listens for the Spacebar to be pressed
+        document.addEventListener("keydown", function(event) {
+            if (event.code === "Space") {
+                if (gameOver) {
+                    resetGame(); // Restart if the game is over
+                } else if (!isJumping) {
+                    player.velocityY = player.jumpPower; // Jump!
+                    isJumping = true;
+                }
+            }
+        });
+
+        // --- GAME FUNCTIONS ---
+        function spawnObstacle() {
+            // Randomize the height and width of the incoming blocks slightly
+            const width = 20 + Math.random() * 20;
+            const height = 30 + Math.random() * 30;
+            obstacles.push({ 
+                x: canvas.width, 
+                y: 230 - height, 
+                width: width, 
+                height: height 
+            });
+        }
+
+        function resetGame() {
+            obstacles.length = 0;
+            score = 0;
+            gameOver = false;
+            player.y = 200;
+            player.velocityY = 0;
+            gameSpeed = 5;
+        }
+
+        function updateLogic() {
+            if (gameOver) return;
+
+            // 1. Update Player Physics (Gravity)
+            player.velocityY += player.gravity;
+            player.y += player.velocityY;
+
+            // Stop the player from falling through the floor
+            if (player.y >= 200) {
+                player.y = 200;
+                isJumping = false;
+                player.velocityY = 0;
+            }
+
+            // 2. Update Obstacles
+            for (let i = 0; i < obstacles.length; i++) {
+                obstacles[i].x -= gameSpeed;
+
+                // Collision Detection: Did the player hit this obstacle?
+                if (player.x < obstacles[i].x + obstacles[i].width &&
+                    player.x + player.width > obstacles[i].x &&
+                    player.y < obstacles[i].y + obstacles[i].height &&
+                    player.y + player.height > obstacles[i].y) {
+                    gameOver = true;
+                }
+            }
+
+            // 3. Score Points & Remove old obstacles
+            if (obstacles.length > 0 && obstacles[0].x < -obstacles[0].width) {
+                obstacles.shift(); // Remove the passed obstacle
+                score += 10;       // Give points
+                
+                // Slowly make the game faster as you score more!
+                if (score % 50 === 0) {
+                    gameSpeed += 0.5; 
+                }
+            }
+
+            // 4. Randomly spawn new obstacles
+            // We make sure there's enough space between them so it's not impossible
+            if (Math.random() < 0.02) {
+                if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 250) {
+                    spawnObstacle();
+                }
+            }
+        }
+
+        function drawGraphics() {
+            // Clear the previous frame
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw the Ground
+            ctx.fillStyle = "#555";
+            ctx.fillRect(0, 230, canvas.width, 20);
+
+            // Draw the Player
+            ctx.fillStyle = "#007BFF"; // Blue
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            // Draw the Obstacles
+            ctx.fillStyle = "#DC3545"; // Red
+            for (let i = 0; i < obstacles.length; i++) {
+                ctx.fillRect(obstacles[i].x, obstacles[i].y, obstacles[i].width, obstacles[i].height);
+            }
+
+            // Draw the Score
+            ctx.fillStyle = "#333";
+            ctx.font = "bold 20px sans-serif";
+            ctx.fillText("Score: " + score, 20, 35);
+
+            // Draw Game Over text
+            if (gameOver) {
+                ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = "white";
+                ctx.font = "bold 36px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText("GAME OVER!", canvas.width / 2, canvas.height / 2 - 10);
+                
+                ctx.font = "20px sans-serif";
+                ctx.fillText("Press SPACE to Restart", canvas.width / 2, canvas.height / 2 + 30);
+                ctx.textAlign = "left"; // reset alignment
+            }
+        }
+
+        // The main game loop that runs 60 times a second
+        function gameLoop() {
+            updateLogic();
+            drawGraphics();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start the game!
+        gameLoop();
+    </script>
+</body>
+</html>
