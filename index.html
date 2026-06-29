@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Obstacle Game</title>
     <style>
-        /* This section styles the page and centers the game screen */
         body {
             margin: 0;
             padding: 0;
@@ -37,7 +36,6 @@
         let score = 0;
         let gameOver = false;
 
-        // The blue square you control
         const player = { 
             x: 50, 
             y: 200, 
@@ -48,18 +46,17 @@
             jumpPower: -14 
         };
         
-        // The red blocks you have to jump over
         const obstacles = [];
+        const coins = []; // <-- NEW: Array to hold our coins
         let gameSpeed = 5;
 
         // --- GAME CONTROLS ---
-        // Listens for the Spacebar to be pressed
         document.addEventListener("keydown", function(event) {
             if (event.code === "Space") {
                 if (gameOver) {
-                    resetGame(); // Restart if the game is over
+                    resetGame();
                 } else if (!isJumping) {
-                    player.velocityY = player.jumpPower; // Jump!
+                    player.velocityY = player.jumpPower;
                     isJumping = true;
                 }
             }
@@ -67,7 +64,6 @@
 
         // --- GAME FUNCTIONS ---
         function spawnObstacle() {
-            // Randomize the height and width of the incoming blocks slightly
             const width = 20 + Math.random() * 20;
             const height = 30 + Math.random() * 30;
             obstacles.push({ 
@@ -78,8 +74,21 @@
             });
         }
 
+        // <-- NEW: Function to spawn coins
+        function spawnCoin() {
+            // Spawn coins up in the air so the player has to jump
+            const yPos = 100 + Math.random() * 60; 
+            coins.push({
+                x: canvas.width,
+                y: yPos,
+                radius: 10,
+                collected: false
+            });
+        }
+
         function resetGame() {
             obstacles.length = 0;
+            coins.length = 0; // Clear coins on restart
             score = 0;
             gameOver = false;
             player.y = 200;
@@ -90,11 +99,10 @@
         function updateLogic() {
             if (gameOver) return;
 
-            // 1. Update Player Physics (Gravity)
+            // 1. Update Player Physics
             player.velocityY += player.gravity;
             player.y += player.velocityY;
 
-            // Stop the player from falling through the floor
             if (player.y >= 200) {
                 player.y = 200;
                 isJumping = false;
@@ -105,7 +113,7 @@
             for (let i = 0; i < obstacles.length; i++) {
                 obstacles[i].x -= gameSpeed;
 
-                // Collision Detection: Did the player hit this obstacle?
+                // Hit an obstacle?
                 if (player.x < obstacles[i].x + obstacles[i].width &&
                     player.x + player.width > obstacles[i].x &&
                     player.y < obstacles[i].y + obstacles[i].height &&
@@ -114,50 +122,83 @@
                 }
             }
 
-            // 3. Score Points & Remove old obstacles
+            // 3. Update Coins (NEW)
+            for (let i = 0; i < coins.length; i++) {
+                coins[i].x -= gameSpeed;
+
+                // Did the player touch the coin? (Simple collision math)
+                let distX = Math.abs(coins[i].x - (player.x + player.width / 2));
+                let distY = Math.abs(coins[i].y - (player.y + player.height / 2));
+
+                if (distX <= (player.width / 2 + coins[i].radius) && distY <= (player.height / 2 + coins[i].radius)) {
+                    if (!coins[i].collected) {
+                        coins[i].collected = true;
+                        score += 50; // Bonus points!
+                    }
+                }
+            }
+
+            // Remove collected coins or coins that went off screen
+            for (let i = coins.length - 1; i >= 0; i--) {
+                if (coins[i].x < -20 || coins[i].collected) {
+                    coins.splice(i, 1);
+                }
+            }
+
+            // 4. Score Points & Remove old obstacles
             if (obstacles.length > 0 && obstacles[0].x < -obstacles[0].width) {
-                obstacles.shift(); // Remove the passed obstacle
-                score += 10;       // Give points
+                obstacles.shift();
+                score += 10; 
                 
-                // Slowly make the game faster as you score more!
                 if (score % 50 === 0) {
                     gameSpeed += 0.5; 
                 }
             }
 
-            // 4. Randomly spawn new obstacles
-            // We make sure there's enough space between them so it's not impossible
+            // 5. Randomly spawn new things
             if (Math.random() < 0.02) {
                 if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 250) {
                     spawnObstacle();
                 }
             }
+
+            // NEW: Randomly spawn a coin (1% chance every frame)
+            if (Math.random() < 0.01) {
+                spawnCoin();
+            }
         }
 
         function drawGraphics() {
-            // Clear the previous frame
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw the Ground
+            // Draw Ground
             ctx.fillStyle = "#555";
             ctx.fillRect(0, 230, canvas.width, 20);
 
-            // Draw the Player
-            ctx.fillStyle = "#007BFF"; // Blue
+            // Draw Player
+            ctx.fillStyle = "#007BFF"; 
             ctx.fillRect(player.x, player.y, player.width, player.height);
 
-            // Draw the Obstacles
-            ctx.fillStyle = "#DC3545"; // Red
+            // Draw Obstacles
+            ctx.fillStyle = "#DC3545"; 
             for (let i = 0; i < obstacles.length; i++) {
                 ctx.fillRect(obstacles[i].x, obstacles[i].y, obstacles[i].width, obstacles[i].height);
             }
 
-            // Draw the Score
+            // Draw Coins (NEW)
+            ctx.fillStyle = "#FFD700"; // Gold Color
+            for (let i = 0; i < coins.length; i++) {
+                ctx.beginPath();
+                ctx.arc(coins[i].x, coins[i].y, coins[i].radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.closePath();
+            }
+
+            // Draw Score
             ctx.fillStyle = "#333";
             ctx.font = "bold 20px sans-serif";
             ctx.fillText("Score: " + score, 20, 35);
 
-            // Draw Game Over text
             if (gameOver) {
                 ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -169,18 +210,16 @@
                 
                 ctx.font = "20px sans-serif";
                 ctx.fillText("Press SPACE to Restart", canvas.width / 2, canvas.height / 2 + 30);
-                ctx.textAlign = "left"; // reset alignment
+                ctx.textAlign = "left"; 
             }
         }
 
-        // The main game loop that runs 60 times a second
         function gameLoop() {
             updateLogic();
             drawGraphics();
             requestAnimationFrame(gameLoop);
         }
 
-        // Start the game!
         gameLoop();
     </script>
 </body>
