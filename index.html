@@ -16,7 +16,6 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
-        /* A container to hold the canvas and the menu exactly on top of each other */
         #gameContainer {
             position: relative;
             width: 600px;
@@ -30,10 +29,9 @@
             border-radius: 8px;
         }
 
-        /* --- NEW: Menu Styles --- */
         #startMenu {
             position: absolute;
-            top: 4px; /* Accounts for canvas border */
+            top: 4px; 
             left: 4px;
             width: 600px;
             height: 250px;
@@ -44,7 +42,7 @@
             justify-content: center;
             align-items: center;
             color: white;
-            z-index: 10; /* Keeps it above the game */
+            z-index: 10; 
         }
 
         #startMenu h1 {
@@ -98,10 +96,13 @@
         const ctx = canvas.getContext("2d");
         const startMenu = document.getElementById("startMenu");
 
-        let isJumping = false;
         let score = 0;
         let gameOver = false;
-        let gameStarted = false; // NEW: Tracks if we are in the menu
+        let gameStarted = false; 
+
+        // NEW: Jump tracking variables!
+        let jumpCount = 0;
+        const maxJumps = 2; // You can change this to 3 for a triple jump!
 
         const player = { 
             x: 50, 
@@ -110,52 +111,51 @@
             height: 30, 
             velocityY: 0, 
             gravity: 1.2, 
-            jumpPower: -14 
+            jumpPower: -13 // Tweaked slightly for better double jumping
         };
         
         const obstacles = [];
         const coins = []; 
         let gameSpeed = 5;
-        let baseSpeed = 5; // NEW: Remembers the starting speed for the chosen difficulty
+        let baseSpeed = 5; 
 
         // --- GAME CONTROLS ---
         document.addEventListener("keydown", function(event) {
             if (event.code === "Space") {
                 if (gameOver) {
                     resetGame();
-                } else if (!isJumping && gameStarted) { // Only jump if game has started
+                } else if (gameStarted && jumpCount < maxJumps) {
+                    // NEW: As long as jumpCount is less than 2, they can jump!
                     player.velocityY = player.jumpPower;
-                    isJumping = true;
+                    jumpCount++; 
                 }
             }
         });
 
         // --- GAME FUNCTIONS ---
-
-        // NEW: Function to handle difficulty selection and start the game
         function startGame(difficulty) {
             if (difficulty === 'easy') {
                 baseSpeed = 3.5;
-                player.gravity = 1.0; // Floaty jumps
+                player.gravity = 1.0; 
             } else if (difficulty === 'medium') {
                 baseSpeed = 5;
-                player.gravity = 1.2; // Normal jumps
+                player.gravity = 1.2; 
             } else if (difficulty === 'hard') {
                 baseSpeed = 7.5;
-                player.gravity = 1.5; // Faster falling
+                player.gravity = 1.5; 
             }
 
-            // Hide the menu
             startMenu.style.display = "none";
-            
-            // Set up the game and start
             gameStarted = true;
             resetGame();
         }
 
         function spawnObstacle() {
+            // NEW: 20% chance to spawn an extra tall block you MUST double jump over
+            const isTall = Math.random() > 0.8; 
             const width = 20 + Math.random() * 20;
-            const height = 30 + Math.random() * 30;
+            const height = isTall ? (65 + Math.random() * 15) : (30 + Math.random() * 20);
+            
             obstacles.push({ 
                 x: canvas.width, 
                 y: 230 - height, 
@@ -165,7 +165,10 @@
         }
 
         function spawnCoin() {
-            const yPos = 100 + Math.random() * 60; 
+            // NEW: 50% chance for a low coin, 50% chance for a HIGH double-jump coin
+            const isHigh = Math.random() > 0.5;
+            const yPos = isHigh ? (40 + Math.random() * 30) : (120 + Math.random() * 40); 
+            
             coins.push({
                 x: canvas.width,
                 y: yPos,
@@ -181,28 +184,28 @@
             gameOver = false;
             player.y = 200;
             player.velocityY = 0;
-            gameSpeed = baseSpeed; // Use the speed chosen from the menu
+            jumpCount = 0; // Reset jumps
+            gameSpeed = baseSpeed; 
         }
 
         function updateLogic() {
-            // Don't run game logic if we are in the menu or game is over
             if (!gameStarted || gameOver) return; 
 
             // 1. Update Player Physics
             player.velocityY += player.gravity;
             player.y += player.velocityY;
 
+            // Stop at the ground
             if (player.y >= 200) {
                 player.y = 200;
-                isJumping = false;
                 player.velocityY = 0;
+                jumpCount = 0; // NEW: Reset jump counter when touching the ground
             }
 
             // 2. Update Obstacles
             for (let i = 0; i < obstacles.length; i++) {
                 obstacles[i].x -= gameSpeed;
 
-                // Hit an obstacle?
                 if (player.x < obstacles[i].x + obstacles[i].width &&
                     player.x + player.width > obstacles[i].x &&
                     player.y < obstacles[i].y + obstacles[i].height &&
@@ -232,7 +235,7 @@
                 }
             }
 
-            // 4. Score Points & Remove old obstacles
+            // 4. Score Points
             if (obstacles.length > 0 && obstacles[0].x < -obstacles[0].width) {
                 obstacles.shift();
                 score += 10; 
@@ -242,14 +245,14 @@
                 }
             }
 
-            // 5. Randomly spawn new things
+            // 5. Spawn logic
             if (Math.random() < 0.02) {
                 if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 250) {
                     spawnObstacle();
                 }
             }
 
-            if (Math.random() < 0.01) {
+            if (Math.random() < 0.015) { // Slightly increased coin chances!
                 spawnCoin();
             }
         }
@@ -297,7 +300,6 @@
                 ctx.font = "20px sans-serif";
                 ctx.fillText("Press SPACE to Restart", canvas.width / 2, canvas.height / 2 + 30);
                 
-                // Add a tip to refresh for changing difficulty
                 ctx.font = "14px sans-serif";
                 ctx.fillStyle = "#ccc";
                 ctx.fillText("(Refresh the page to change difficulty)", canvas.width / 2, canvas.height / 2 + 60);
@@ -312,7 +314,6 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // Start the loop (it will just draw the initial screen until a difficulty is picked)
         gameLoop();
     </script>
 </body>
