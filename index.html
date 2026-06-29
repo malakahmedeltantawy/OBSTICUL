@@ -121,6 +121,8 @@
             y: 200, 
             width: 30, 
             height: 30, 
+            normalHeight: 30, // Save original size
+            duckHeight: 15,   // Ducking height
             velocityY: 0, 
             gravity: 1.0, 
             jumpPower: -12.5,
@@ -128,9 +130,11 @@
             color: "#007BFF" 
         };
         
+        // Updated to track left, right, and down (duck)
         const keysPressed = {
             left: false,
-            right: false
+            right: false,
+            down: false
         };
 
         const obstacles = [];
@@ -143,7 +147,8 @@
             if (event.code === "Space") {
                 if (gameOver) {
                     resetGame();
-                } else if (gameStarted && jumpCount < maxJumps) {
+                } else if (gameStarted && jumpCount < maxJumps && !keysPressed.down) {
+                    // Can't jump while ducking
                     player.velocityY = player.jumpPower;
                     jumpCount++; 
                 }
@@ -155,6 +160,10 @@
             if (event.code === "ArrowRight" || event.code === "KeyD") {
                 keysPressed.right = true;
             }
+            // NEW: Listen for Duck Key
+            if (event.code === "ArrowDown" || event.code === "KeyS") {
+                keysPressed.down = true;
+            }
         });
 
         document.addEventListener("keyup", function(event) {
@@ -163,6 +172,10 @@
             }
             if (event.code === "ArrowRight" || event.code === "KeyD") {
                 keysPressed.right = false;
+            }
+            // NEW: Stop ducking when key is released
+            if (event.code === "ArrowDown" || event.code === "KeyS") {
+                keysPressed.down = false;
             }
         });
 
@@ -193,26 +206,43 @@
         }
 
         function spawnObstacle() {
-            // NEW: 40% chance to spawn a horizontal side-dodge obstacle instead of a jump obstacle
-            const spawnDodgeObstacle = Math.random() > 0.6;
+            // NEW: Hard mode splits obstacles evenly between jumping, dodging, and ducking!
+            let obstaclePool = ['jump', 'dodge'];
+            if (currentDifficulty === 'hard') {
+                obstaclePool.push('duck');
+            }
 
-            if (spawnDodgeObstacle && currentDifficulty !== 'easy') {
-                // Easy mode won't have these to keep it simple.
-                // This builds a long wall up in the air with a clear safety zone on one side.
+            // Pick a random obstacle type from the allowed pool
+            const chosenType = obstaclePool[Math.floor(Math.random() * obstaclePool.length)];
+
+            if (chosenType === 'duck' && currentDifficulty === 'hard') {
+                // Ceiling obstacle: Must press DOWN to slide underneath it
+                obstacles.push({
+                    x: canvas.width,
+                    y: 0, // Starts at the very top of the screen
+                    width: 40,
+                    height: 185, // Leaves exactly enough room to pass if ducking on the floor
+                    type: 'duck',
+                    color: "#9B59B6" // Purple for ducking walls
+                });
+            } 
+            else if (chosenType === 'dodge' && currentDifficulty !== 'easy') {
+                // Side dodge wall
                 const leaveGapOnLeft = Math.random() > 0.5;
                 let obstacleWidth = 420; 
-                let xPosition = leaveGapOnLeft ? 180 : 0; // leaves a 180px hole to run through
+                let xPosition = leaveGapOnLeft ? 180 : 0; 
 
                 obstacles.push({
                     x: canvas.width + xPosition,
-                    y: 80, // Suspended in mid-air
+                    y: 90, 
                     width: obstacleWidth,
                     height: 25,
                     type: 'dodge',
-                    color: "#E67E22" // Orange color for horizontal barriers
+                    color: "#E67E22" 
                 });
-            } else {
-                // Regular ground jump blocks
+            } 
+            else {
+                // Standard jump block
                 let width = 20 + Math.random() * 20;
                 let height = 30;
 
@@ -231,7 +261,7 @@
                     width: width, 
                     height: height,
                     type: 'jump',
-                    color: "#DC3545" // Red color for ground obstacles
+                    color: "#DC3545" 
                 });
             }
         }
@@ -255,28 +285,40 @@
             gameOver = false;
             player.y = 200;
             player.x = 50; 
+            player.height = player.normalHeight;
             player.velocityY = 0;
             jumpCount = 0; 
             gameSpeed = baseSpeed; 
             keysPressed.left = false;
             keysPressed.right = false;
+            keysPressed.down = false;
             canvas.focus();
         }
 
         function updateLogic() {
             if (!gameStarted || gameOver) return; 
 
-            // 1. Vertical Physics
+            // 1. Handle Ducking Mechanics
+            // If pressing down and on the ground, shrink the player
+            if (keysPressed.down && player.y === 200) {
+                player.height = player.duckHeight;
+            } else {
+                player.height = player.normalHeight;
+            }
+
+            // 2. Vertical Physics
             player.velocityY += player.gravity;
             player.y += player.velocityY;
 
-            if (player.y >= 200) {
-                player.y = 200;
+            // Calculate current floor level based on height to prevent clipping
+            let floorY = 230 - player.height;
+            if (player.y >= floorY) {
+                player.y = floorY;
                 player.velocityY = 0;
                 jumpCount = 0; 
             }
 
-            // 2. Horizontal Movement
+            // 3. Horizontal Movement
             if (keysPressed.left) {
                 player.x -= player.moveSpeed;
             }
@@ -287,7 +329,7 @@
             if (player.x < 0) player.x = 0;
             if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
 
-            // 3. Obstacles
+            // 4. Obstacle Collision Loop
             for (let i = 0; i < obstacles.length; i++) {
                 obstacles[i].x -= gameSpeed;
 
@@ -299,7 +341,7 @@
                 }
             }
 
-            // 4. Coins 
+            // 5. Update Coins 
             for (let i = 0; i < coins.length; i++) {
                 coins[i].x -= gameSpeed;
 
@@ -320,8 +362,8 @@
                 }
             }
 
-            // 5. Score
-            if (obstacles.length > 0 && obstacles[0].x < -600) { // Larger offset room for wider elements
+            // 6. Score tracking
+            if (obstacles.length > 0 && obstacles[0].x < -600) { 
                 obstacles.shift();
                 score += 10; 
                 if (score % 50 === 0) {
@@ -329,7 +371,7 @@
                 }
             }
 
-            // 6. Spawn timers
+            // 7. Spawn timers
             if (Math.random() < 0.02) {
                 if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 280) {
                     spawnObstacle();
