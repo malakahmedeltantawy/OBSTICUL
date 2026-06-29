@@ -99,10 +99,10 @@
         let score = 0;
         let gameOver = false;
         let gameStarted = false; 
+        let currentDifficulty = 'medium'; // Tracks the active choice
 
-        // NEW: Jump tracking variables!
         let jumpCount = 0;
-        const maxJumps = 2; // You can change this to 3 for a triple jump!
+        const maxJumps = 2; 
 
         const player = { 
             x: 50, 
@@ -111,7 +111,7 @@
             height: 30, 
             velocityY: 0, 
             gravity: 1.2, 
-            jumpPower: -13 // Tweaked slightly for better double jumping
+            jumpPower: -13 
         };
         
         const obstacles = [];
@@ -125,7 +125,6 @@
                 if (gameOver) {
                     resetGame();
                 } else if (gameStarted && jumpCount < maxJumps) {
-                    // NEW: As long as jumpCount is less than 2, they can jump!
                     player.velocityY = player.jumpPower;
                     jumpCount++; 
                 }
@@ -134,11 +133,13 @@
 
         // --- GAME FUNCTIONS ---
         function startGame(difficulty) {
+            currentDifficulty = difficulty; // Save the choice for spawning rules
+
             if (difficulty === 'easy') {
-                baseSpeed = 3.5;
+                baseSpeed = 4;
                 player.gravity = 1.0; 
             } else if (difficulty === 'medium') {
-                baseSpeed = 5;
+                baseSpeed = 5.5;
                 player.gravity = 1.2; 
             } else if (difficulty === 'hard') {
                 baseSpeed = 7.5;
@@ -151,10 +152,21 @@
         }
 
         function spawnObstacle() {
-            // NEW: 20% chance to spawn an extra tall block you MUST double jump over
-            const isTall = Math.random() > 0.8; 
-            const width = 20 + Math.random() * 20;
-            const height = isTall ? (65 + Math.random() * 15) : (30 + Math.random() * 20);
+            let width = 20 + Math.random() * 20;
+            let height = 30;
+
+            // NEW: Set block height rules based on your selected difficulty!
+            if (currentDifficulty === 'easy') {
+                // Easy: Always short and simple blocks
+                height = 20 + Math.random() * 15; 
+            } else if (currentDifficulty === 'medium') {
+                // Medium: Mix of a little short and a little tall
+                const isTall = Math.random() > 0.5;
+                height = isTall ? (45 + Math.random() * 15) : (25 + Math.random() * 15);
+            } else if (currentDifficulty === 'hard') {
+                // Hard: Mostly very tall blocks that demand double jumps
+                height = 65 + Math.random() * 20;
+            }
             
             obstacles.push({ 
                 x: canvas.width, 
@@ -165,7 +177,7 @@
         }
 
         function spawnCoin() {
-            // NEW: 50% chance for a low coin, 50% chance for a HIGH double-jump coin
+            // Coins adapt to heights you can reach
             const isHigh = Math.random() > 0.5;
             const yPos = isHigh ? (40 + Math.random() * 30) : (120 + Math.random() * 40); 
             
@@ -184,7 +196,7 @@
             gameOver = false;
             player.y = 200;
             player.velocityY = 0;
-            jumpCount = 0; // Reset jumps
+            jumpCount = 0; 
             gameSpeed = baseSpeed; 
         }
 
@@ -195,11 +207,10 @@
             player.velocityY += player.gravity;
             player.y += player.velocityY;
 
-            // Stop at the ground
             if (player.y >= 200) {
                 player.y = 200;
                 player.velocityY = 0;
-                jumpCount = 0; // NEW: Reset jump counter when touching the ground
+                jumpCount = 0; 
             }
 
             // 2. Update Obstacles
@@ -252,7 +263,7 @@
                 }
             }
 
-            if (Math.random() < 0.015) { // Slightly increased coin chances!
+            if (Math.random() < 0.015) { 
                 spawnCoin();
             }
         }
