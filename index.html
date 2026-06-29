@@ -29,7 +29,8 @@
             border-radius: 8px;
         }
 
-        #startMenu {
+        /* Menu Overlay Styles */
+        .menu-overlay {
             position: absolute;
             top: 4px; 
             left: 4px;
@@ -45,46 +46,57 @@
             z-index: 10; 
         }
 
-        #startMenu h1 {
+        .menu-overlay h1 {
             margin-top: 0;
             margin-bottom: 20px;
             color: #FFD700;
         }
 
-        .diff-btn {
+        .menu-btn {
             background-color: #007BFF;
             color: white;
             border: none;
-            padding: 10px 30px;
+            padding: 10px 20px;
             margin: 5px;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
             border-radius: 5px;
             cursor: pointer;
-            width: 150px;
+            width: 180px;
             transition: 0.2s;
         }
 
-        .diff-btn:hover {
-            background-color: #0056b3;
+        .menu-btn:hover {
             transform: scale(1.05);
         }
 
+        /* Difficulty button colors */
         #btn-easy { background-color: #28a745; }
         #btn-easy:hover { background-color: #1e7e34; }
-        
         #btn-hard { background-color: #DC3545; }
         #btn-hard:hover { background-color: #bd2130; }
+
+        /* Character button colors */
+        #btn-char1 { background-color: #007BFF; }
+        #btn-char2 { background-color: #20c997; }
+        #btn-char3 { background-color: #6f42c1; }
     </style>
 </head>
 <body>
 
     <div id="gameContainer">
-        <div id="startMenu">
+        <div id="startMenu" class="menu-overlay">
             <h1>Select Difficulty</h1>
-            <button class="diff-btn" id="btn-easy" onclick="startGame('easy')">Easy</button>
-            <button class="diff-btn" id="btn-medium" onclick="startGame('medium')">Medium</button>
-            <button class="diff-btn" id="btn-hard" onclick="startGame('hard')">Hard</button>
+            <button class="menu-btn" id="btn-easy" onclick="selectDifficulty('easy')">Easy</button>
+            <button class="menu-btn" id="btn-medium" onclick="selectDifficulty('medium')">Medium</button>
+            <button class="menu-btn" id="btn-hard" onclick="selectDifficulty('hard')">Hard</button>
+        </div>
+
+        <div id="charMenu" class="menu-overlay" style="display: none;">
+            <h1>Choose Your Character</h1>
+            <button class="menu-btn" id="btn-char1" onclick="startGame('#007BFF')">Blue Block</button>
+            <button class="menu-btn" id="btn-char2" onclick="startGame('#20c997')">Green Speedster</button>
+            <button class="menu-btn" id="btn-char3" onclick="startGame('#6f42c1')">Purple Ninja</button>
         </div>
 
         <canvas id="gameCanvas" width="600" height="250"></canvas>
@@ -95,13 +107,13 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const startMenu = document.getElementById("startMenu");
+        const charMenu = document.getElementById("charMenu");
 
         let score = 0;
         let gameOver = false;
         let gameStarted = false; 
         let currentDifficulty = 'medium'; 
 
-        // Jump tracking
         let jumpCount = 0;
         const maxJumps = 2; 
 
@@ -112,7 +124,8 @@
             height: 30, 
             velocityY: 0, 
             gravity: 1.0, 
-            jumpPower: -12.5 // Adjusted jump height for better control
+            jumpPower: -12.5,
+            color: "#007BFF" // Default color, will be updated by character menu
         };
         
         const obstacles = [];
@@ -126,7 +139,6 @@
                 if (gameOver) {
                     resetGame();
                 } else if (gameStarted && jumpCount < maxJumps) {
-                    // Instantly reset downward velocity so the second jump feels powerful
                     player.velocityY = player.jumpPower;
                     jumpCount++; 
                 }
@@ -134,21 +146,34 @@
         });
 
         // --- GAME FUNCTIONS ---
-        function startGame(difficulty) {
+        
+        // Step 1: Handle difficulty click, then open character menu
+        function selectDifficulty(difficulty) {
             currentDifficulty = difficulty; 
 
             if (difficulty === 'easy') {
                 baseSpeed = 4;
-                player.gravity = 0.8; // More airtime
+                player.gravity = 0.8; 
             } else if (difficulty === 'medium') {
                 baseSpeed = 5.5;
-                player.gravity = 1.0; // Standard physics
+                player.gravity = 1.0; 
             } else if (difficulty === 'hard') {
                 baseSpeed = 7.5;
-                player.gravity = 1.3; // Snappy, faster physics
+                player.gravity = 1.3; 
             }
 
+            // Hide difficulty menu and show character menu
             startMenu.style.display = "none";
+            charMenu.style.display = "flex";
+        }
+
+        // Step 2: Handle character selection click and start the run
+        function startGame(chosenColor) {
+            player.color = chosenColor;
+
+            // Hide character menu
+            charMenu.style.display = "none";
+            
             gameStarted = true;
             resetGame();
         }
@@ -200,18 +225,15 @@
         function updateLogic() {
             if (!gameStarted || gameOver) return; 
 
-            // 1. Update Player Physics
             player.velocityY += player.gravity;
             player.y += player.velocityY;
 
-            // Strict floor boundary check
             if (player.y >= 200) {
                 player.y = 200;
                 player.velocityY = 0;
-                jumpCount = 0; // Safely reset jumps on the ground
+                jumpCount = 0; 
             }
 
-            // 2. Update Obstacles
             for (let i = 0; i < obstacles.length; i++) {
                 obstacles[i].x -= gameSpeed;
 
@@ -223,7 +245,6 @@
                 }
             }
 
-            // 3. Update Coins 
             for (let i = 0; i < coins.length; i++) {
                 coins[i].x -= gameSpeed;
 
@@ -244,7 +265,6 @@
                 }
             }
 
-            // 4. Score Points
             if (obstacles.length > 0 && obstacles[0].x < -obstacles[0].width) {
                 obstacles.shift();
                 score += 10; 
@@ -254,7 +274,6 @@
                 }
             }
 
-            // 5. Spawn logic
             if (Math.random() < 0.02) {
                 if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 250) {
                     spawnObstacle();
@@ -273,8 +292,8 @@
             ctx.fillStyle = "#555";
             ctx.fillRect(0, 230, canvas.width, 20);
 
-            // Draw Player
-            ctx.fillStyle = "#007BFF"; 
+            // Draw Player using the selected character's color
+            ctx.fillStyle = player.color; 
             ctx.fillRect(player.x, player.y, player.width, player.height);
 
             // Draw Obstacles
@@ -311,7 +330,7 @@
                 
                 ctx.font = "14px sans-serif";
                 ctx.fillStyle = "#ccc";
-                ctx.fillText("(Refresh the page to change difficulty)", canvas.width / 2, canvas.height / 2 + 60);
+                ctx.fillText("(Refresh the page to change settings)", canvas.width / 2, canvas.height / 2 + 60);
                 
                 ctx.textAlign = "left"; 
             }
