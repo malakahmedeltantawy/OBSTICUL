@@ -27,7 +27,7 @@
             border: 4px solid #333;
             box-shadow: 0 8px 16px rgba(0,0,0,0.2);
             border-radius: 8px;
-            outline: none; /* Removes the selection box */
+            outline: none;
         }
 
         .menu-overlay {
@@ -106,7 +106,6 @@
         const startMenu = document.getElementById("startMenu");
         const charMenu = document.getElementById("charMenu");
 
-        // Force the game window to listen to keys automatically
         canvas.focus();
 
         let score = 0;
@@ -125,7 +124,7 @@
             velocityY: 0, 
             gravity: 1.0, 
             jumpPower: -12.5,
-            moveSpeed: 6, // Slightly boosted speed for snappy dodge movement
+            moveSpeed: 6, 
             color: "#007BFF" 
         };
         
@@ -189,29 +188,52 @@
             player.color = chosenColor;
             charMenu.style.display = "none";
             gameStarted = true;
-            canvas.focus(); // Re-focus canvas once menus are hidden
+            canvas.focus(); 
             resetGame();
         }
 
         function spawnObstacle() {
-            let width = 20 + Math.random() * 20;
-            let height = 30;
+            // NEW: 40% chance to spawn a horizontal side-dodge obstacle instead of a jump obstacle
+            const spawnDodgeObstacle = Math.random() > 0.6;
 
-            if (currentDifficulty === 'easy') {
-                height = 20 + Math.random() * 15; 
-            } else if (currentDifficulty === 'medium') {
-                const isTall = Math.random() > 0.5;
-                height = isTall ? (45 + Math.random() * 10) : (25 + Math.random() * 10);
-            } else if (currentDifficulty === 'hard') {
-                height = 60 + Math.random() * 15;
+            if (spawnDodgeObstacle && currentDifficulty !== 'easy') {
+                // Easy mode won't have these to keep it simple.
+                // This builds a long wall up in the air with a clear safety zone on one side.
+                const leaveGapOnLeft = Math.random() > 0.5;
+                let obstacleWidth = 420; 
+                let xPosition = leaveGapOnLeft ? 180 : 0; // leaves a 180px hole to run through
+
+                obstacles.push({
+                    x: canvas.width + xPosition,
+                    y: 80, // Suspended in mid-air
+                    width: obstacleWidth,
+                    height: 25,
+                    type: 'dodge',
+                    color: "#E67E22" // Orange color for horizontal barriers
+                });
+            } else {
+                // Regular ground jump blocks
+                let width = 20 + Math.random() * 20;
+                let height = 30;
+
+                if (currentDifficulty === 'easy') {
+                    height = 20 + Math.random() * 15; 
+                } else if (currentDifficulty === 'medium') {
+                    const isTall = Math.random() > 0.5;
+                    height = isTall ? (45 + Math.random() * 10) : (25 + Math.random() * 10);
+                } else if (currentDifficulty === 'hard') {
+                    height = 60 + Math.random() * 15;
+                }
+                
+                obstacles.push({ 
+                    x: canvas.width, 
+                    y: 230 - height, 
+                    width: width, 
+                    height: height,
+                    type: 'jump',
+                    color: "#DC3545" // Red color for ground obstacles
+                });
             }
-            
-            obstacles.push({ 
-                x: canvas.width, 
-                y: 230 - height, 
-                width: width, 
-                height: height 
-            });
         }
 
         function spawnCoin() {
@@ -262,7 +284,6 @@
                 player.x += player.moveSpeed;
             }
 
-            // Boundary clamping
             if (player.x < 0) player.x = 0;
             if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
 
@@ -300,7 +321,7 @@
             }
 
             // 5. Score
-            if (obstacles.length > 0 && obstacles[0].x < -obstacles[0].width) {
+            if (obstacles.length > 0 && obstacles[0].x < -600) { // Larger offset room for wider elements
                 obstacles.shift();
                 score += 10; 
                 if (score % 50 === 0) {
@@ -310,7 +331,7 @@
 
             // 6. Spawn timers
             if (Math.random() < 0.02) {
-                if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 250) {
+                if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 280) {
                     spawnObstacle();
                 }
             }
@@ -332,8 +353,8 @@
             ctx.fillRect(player.x, player.y, player.width, player.height);
 
             // Obstacles
-            ctx.fillStyle = "#DC3545"; 
             for (let i = 0; i < obstacles.length; i++) {
+                ctx.fillStyle = obstacles[i].color; 
                 ctx.fillRect(obstacles[i].x, obstacles[i].y, obstacles[i].width, obstacles[i].height);
             }
 
