@@ -70,13 +70,11 @@
             transform: scale(1.05);
         }
 
-        /* Difficulty button colors */
         #btn-easy { background-color: #28a745; }
         #btn-easy:hover { background-color: #1e7e34; }
         #btn-hard { background-color: #DC3545; }
         #btn-hard:hover { background-color: #bd2130; }
 
-        /* Character button colors */
         #btn-char1 { background-color: #007BFF; }
         #btn-char2 { background-color: #20c997; }
         #btn-char3 { background-color: #6f42c1; }
@@ -117,6 +115,7 @@
         let jumpCount = 0;
         const maxJumps = 2; 
 
+        // NEW: Added speedX to handle moving left and right
         const player = { 
             x: 50, 
             y: 200, 
@@ -125,15 +124,23 @@
             velocityY: 0, 
             gravity: 1.0, 
             jumpPower: -12.5,
-            color: "#007BFF" // Default color, will be updated by character menu
+            moveSpeed: 5, 
+            color: "#007BFF" 
         };
         
+        // NEW: Object to keep track of which movement keys are being held down
+        const keysPressed = {
+            left: false,
+            right: false
+        };
+
         const obstacles = [];
         const coins = []; 
         let gameSpeed = 5;
         let baseSpeed = 5; 
 
         // --- GAME CONTROLS ---
+        // Tracks when a key is pressed down
         document.addEventListener("keydown", function(event) {
             if (event.code === "Space") {
                 if (gameOver) {
@@ -143,11 +150,27 @@
                     jumpCount++; 
                 }
             }
+            
+            // NEW: Detect Left / Right movement keys
+            if (event.code === "ArrowLeft" || event.code === "KeyA") {
+                keysPressed.left = true;
+            }
+            if (event.code === "ArrowRight" || event.code === "KeyD") {
+                keysPressed.right = true;
+            }
+        });
+
+        // NEW: Tracks when a key is released so movement stops
+        document.addEventListener("keyup", function(event) {
+            if (event.code === "ArrowLeft" || event.code === "KeyA") {
+                keysPressed.left = false;
+            }
+            if (event.code === "ArrowRight" || event.code === "KeyD") {
+                keysPressed.right = false;
+            }
         });
 
         // --- GAME FUNCTIONS ---
-        
-        // Step 1: Handle difficulty click, then open character menu
         function selectDifficulty(difficulty) {
             currentDifficulty = difficulty; 
 
@@ -162,18 +185,13 @@
                 player.gravity = 1.3; 
             }
 
-            // Hide difficulty menu and show character menu
             startMenu.style.display = "none";
             charMenu.style.display = "flex";
         }
 
-        // Step 2: Handle character selection click and start the run
         function startGame(chosenColor) {
             player.color = chosenColor;
-
-            // Hide character menu
             charMenu.style.display = "none";
-            
             gameStarted = true;
             resetGame();
         }
@@ -217,14 +235,18 @@
             score = 0;
             gameOver = false;
             player.y = 200;
+            player.x = 50; // Reset player position to the left side
             player.velocityY = 0;
             jumpCount = 0; 
             gameSpeed = baseSpeed; 
+            keysPressed.left = false;
+            keysPressed.right = false;
         }
 
         function updateLogic() {
             if (!gameStarted || gameOver) return; 
 
+            // 1. Update Player Vertical Physics (Jumping)
             player.velocityY += player.gravity;
             player.y += player.velocityY;
 
@@ -234,6 +256,23 @@
                 jumpCount = 0; 
             }
 
+            // 2. NEW: Update Player Horizontal Physics (Moving Left & Right)
+            if (keysPressed.left) {
+                player.x -= player.moveSpeed;
+            }
+            if (keysPressed.right) {
+                player.x += player.moveSpeed;
+            }
+
+            // Stop the player from running off the edges of the game screen
+            if (player.x < 0) {
+                player.x = 0;
+            }
+            if (player.x > canvas.width - player.width) {
+                player.x = canvas.width - player.width;
+            }
+
+            // 3. Update Obstacles
             for (let i = 0; i < obstacles.length; i++) {
                 obstacles[i].x -= gameSpeed;
 
@@ -245,6 +284,7 @@
                 }
             }
 
+            // 4. Update Coins 
             for (let i = 0; i < coins.length; i++) {
                 coins[i].x -= gameSpeed;
 
@@ -265,6 +305,7 @@
                 }
             }
 
+            // 5. Score Points
             if (obstacles.length > 0 && obstacles[0].x < -obstacles[0].width) {
                 obstacles.shift();
                 score += 10; 
@@ -274,6 +315,7 @@
                 }
             }
 
+            // 6. Spawn logic
             if (Math.random() < 0.02) {
                 if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 250) {
                     spawnObstacle();
@@ -292,7 +334,7 @@
             ctx.fillStyle = "#555";
             ctx.fillRect(0, 230, canvas.width, 20);
 
-            // Draw Player using the selected character's color
+            // Draw Player
             ctx.fillStyle = player.color; 
             ctx.fillRect(player.x, player.y, player.width, player.height);
 
