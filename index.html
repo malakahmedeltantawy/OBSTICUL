@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+vvvvvv<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -52,7 +52,6 @@
             color: #FFD700;
         }
 
-        /* Styling for the new rules list */
         .menu-overlay ul {
             text-align: left;
             margin: 0 0 15px 0;
@@ -66,7 +65,6 @@
         }
 
         .menu-btn {
-            background-color: #007BFF;
             color: white;
             border: none;
             padding: 10px 20px;
@@ -83,13 +81,18 @@
             transform: scale(1.05);
         }
 
+        #btn-rules-next { background-color: #007BFF; }
+        #btn-rules-next:hover { background-color: #0056b3; }
+
         #btn-easy { background-color: #28a745; }
         #btn-easy:hover { background-color: #1e7e34; }
+        #btn-medium { background-color: #007BFF; }
+        #btn-medium:hover { background-color: #0056b3; }
         #btn-hard { background-color: #DC3545; }
         #btn-hard:hover { background-color: #bd2130; }
 
         #btn-char1 { background-color: #007BFF; }
-        #btn-char2 { background-color: #20c997; }
+        #btn-char2 { background-color: #e67e22; } /* Ahmed character button style */
         #btn-char3 { background-color: #6f42c1; }
     </style>
 </head>
@@ -104,7 +107,7 @@
                 <li><strong>DOWN Arrow (or S):</strong> Duck on the ground to slide under <span style="color:#9B59B6">Purple</span> ceiling bars (Hard Mode).</li>
                 <li>Collect Gold Coins for a bonus <strong>+50 points</strong>!</li>
             </ul>
-            <button class="menu-btn" onclick="showDifficultyMenu()">Next</button>
+            <button class="menu-btn" id="btn-rules-next" onclick="showDifficultyMenu()">Next</button>
         </div>
 
         <div id="startMenu" class="menu-overlay" style="display: none;">
@@ -116,9 +119,9 @@
 
         <div id="charMenu" class="menu-overlay" style="display: none;">
             <h1>Choose Your Character</h1>
-            <button class="menu-btn" id="btn-char1" onclick="startGame('#007BFF')">Blue Block</button>
-            <button class="menu-btn" id="btn-char2" onclick="startGame('#20c997')">Green Speedster</button>
-            <button class="menu-btn" id="btn-char3" onclick="startGame('#6f42c1')">Purple Ninja</button>
+            <button class="menu-btn" id="btn-char1" onclick="startGame('color', '#007BFF')">Blue Block</button>
+            <button class="menu-btn" id="btn-char2" onclick="startGame('image', '')">Ahmed</button>
+            <button class="menu-btn" id="btn-char3" onclick="startGame('color', '#6f42c1')">Purple Ninja</button>
         </div>
 
         <canvas id="gameCanvas" width="600" height="250" tabindex="1"></canvas>
@@ -132,6 +135,10 @@
         const charMenu = document.getElementById("charMenu");
 
         canvas.focus();
+
+        // NEW: Preload the custom image asset
+        const ahmedImage = new Image();
+        ahmedImage.src = "character_ahmed.png"; 
 
         let score = 0;
         let gameOver = false;
@@ -152,6 +159,7 @@
             gravity: 1.0, 
             jumpPower: -12.5,
             moveSpeed: 6, 
+            type: "color",  // NEW: Tracks if player asset is a solid color or custom image
             color: "#007BFF" 
         };
         
@@ -201,8 +209,6 @@
         });
 
         // --- GAME FUNCTIONS ---
-        
-        // NEW: Moves player from Rules screen to Difficulty screen
         function showDifficultyMenu() {
             rulesMenu.style.display = "none";
             startMenu.style.display = "flex";
@@ -226,8 +232,13 @@
             charMenu.style.display = "flex";
         }
 
-        function startGame(chosenColor) {
-            player.color = chosenColor;
+        // UPDATED: Now accepts mode ('color' or 'image') and values accordingly
+        function startGame(charType, chosenColor) {
+            player.type = charType;
+            if (charType === 'color') {
+                player.color = chosenColor;
+            }
+
             charMenu.style.display = "none";
             gameStarted = true;
             canvas.focus(); 
@@ -322,7 +333,7 @@
         function updateLogic() {
             if (!gameStarted || gameOver) return; 
 
-            if (keysPressed.down && player.y === 200) {
+            if (keysPressed.down && player.y === (230 - player.normalHeight)) {
                 player.height = player.duckHeight;
             } else {
                 player.height = player.normalHeight;
@@ -388,74 +399,4 @@
             }
 
             if (Math.random() < 0.02) {
-                if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 280) {
-                    spawnObstacle();
-                }
-            }
-
-            if (Math.random() < 0.015) { 
-                spawnCoin();
-            }
-        }
-
-        function drawGraphics() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Ground
-            ctx.fillStyle = "#555";
-            ctx.fillRect(0, 230, canvas.width, 20);
-
-            // Player
-            ctx.fillStyle = player.color; 
-            ctx.fillRect(player.x, player.y, player.width, player.height);
-
-            // Obstacles
-            for (let i = 0; i < obstacles.length; i++) {
-                ctx.fillStyle = obstacles[i].color; 
-                ctx.fillRect(obstacles[i].x, obstacles[i].y, obstacles[i].width, obstacles[i].height);
-            }
-
-            // Coins
-            ctx.fillStyle = "#FFD700"; 
-            for (let i = 0; i < coins.length; i++) {
-                ctx.beginPath();
-                ctx.arc(coins[i].x, coins[i].y, coins[i].radius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.closePath();
-            }
-
-            // Score
-            ctx.fillStyle = "#333";
-            ctx.font = "bold 20px sans-serif";
-            ctx.fillText("Score: " + score, 20, 35);
-
-            if (gameOver) {
-                ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                ctx.fillStyle = "white";
-                ctx.font = "bold 36px sans-serif";
-                ctx.textAlign = "center";
-                ctx.fillText("GAME OVER!", canvas.width / 2, canvas.height / 2 - 10);
-                
-                ctx.font = "20px sans-serif";
-                ctx.fillText("Press SPACE to Restart", canvas.width / 2, canvas.height / 2 + 30);
-                
-                ctx.font = "14px sans-serif";
-                ctx.fillStyle = "#ccc";
-                ctx.fillText("(Refresh the page to change settings)", canvas.width / 2, canvas.height / 2 + 60);
-                
-                ctx.textAlign = "left"; 
-            }
-        }
-
-        function gameLoop() {
-            updateLogic();
-            drawGraphics();
-            requestAnimationFrame(gameLoop);
-        }
-
-        gameLoop();
-    </script>
-</body>
-</html>
+                if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 280)vv
