@@ -3,477 +3,255 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Obstacle Game</title>
+    <title>Outdoor Scavenger Hunt</title>
     <style>
         body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #e0e0e0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f4f8;
+            color: #333;
+            text-align: center;
+            padding: 20px;
+            margin: 0;
         }
-        
-        #gameContainer {
-            position: relative;
-            width: 600px;
-            height: 250px;
+        .container {
+            max-width: 500px;
+            background: white;
+            margin: 20px auto;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-
-        canvas {
-            background-color: #ffffff;
-            border: 4px solid #333;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-            border-radius: 8px;
-            outline: none;
+        h1 { color: #2c3e50; margin-top: 0; }
+        .status-box {
+            background: #eef2f7;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: bold;
         }
-
-        .menu-overlay {
-            position: absolute;
-            top: 4px; 
-            left: 4px;
-            width: 600px;
-            height: 250px;
-            background-color: rgba(0, 0, 0, 0.85);
-            border-radius: 8px;
+        .timer {
+            font-size: 2rem;
+            color: #e74c3c;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        .scores {
             display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+            justify-content: space-around;
+            margin: 20px 0;
+            font-size: 1.2rem;
+        }
+        .player-score {
+            padding: 10px 20px;
+            border-radius: 8px;
+            background: #dfe6e9;
+        }
+        .active-player {
+            background: #2ecc71;
             color: white;
-            z-index: 10; 
         }
-
-        .menu-overlay h1 {
-            margin-top: 0;
-            margin-bottom: 10px;
-            color: #FFD700;
+        input[type="text"] {
+            width: 80%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 2px solid #bdc3c7;
+            border-radius: 5px;
+            font-size: 1rem;
         }
-
-        .menu-overlay ul {
-            text-align: left;
-            margin: 0 0 15px 0;
-            padding: 0 20px;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-
-        .menu-overlay li {
-            margin-bottom: 5px;
-        }
-
-        .menu-btn {
+        button {
+            background: #3498db;
             color: white;
             border: none;
-            padding: 10px 20px;
-            margin: 5px;
-            font-size: 16px;
-            font-weight: bold;
+            padding: 12px 25px;
+            font-size: 1rem;
             border-radius: 5px;
             cursor: pointer;
-            width: 180px;
             transition: 0.2s;
+            margin: 5px;
         }
-
-        .menu-btn:hover {
-            transform: scale(1.05);
+        button:hover { background: #2980b9; }
+        .hidden { display: none; }
+        #photoPreview {
+            max-width: 100%;
+            max-height: 200px;
+            margin-top: 15px;
+            border-radius: 8px;
+            display: none;
         }
-
-        #btn-rules-next { background-color: #007BFF; }
-        #btn-rules-next:hover { background-color: #0056b3; }
-
-        #btn-easy { background-color: #28a745; }
-        #btn-easy:hover { background-color: #1e7e34; }
-        #btn-medium { background-color: #007BFF; }
-        #btn-medium:hover { background-color: #0056b3; }
-        #btn-hard { background-color: #DC3545; }
-        #btn-hard:hover { background-color: #bd2130; }
-
-        #btn-char1 { background-color: #007BFF; }
-        #btn-char2 { background-color: #e67e22; } 
-        #btn-char3 { background-color: #6f42c1; }
+        .file-input-label {
+            display: inline-block;
+            background: #9b59b6;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
 
-    <div id="gameContainer">
-        <div id="rulesMenu" class="menu-overlay">
-            <h1>How to Play</h1>
-            <ul>
-                <li><strong>SPACEBAR:</strong> Jump (Press 2x in the air to Double Jump over tall <span style="color:#DC3545">Red</span> blocks!).</li>
-                <li><strong>LEFT / RIGHT Arrows (or A/D):</strong> Move sideways to slide through <span style="color:#E67E22">Orange</span> wall gaps.</li>
-                <li><strong>DOWN Arrow (or S):</strong> Duck on the ground to slide under <span style="color:#9B59B6">Purple</span> ceiling bars (Hard Mode).</li>
-                <li>Collect Gold Coins for a bonus <strong>+50 points</strong>!</li>
-            </ul>
-            <button class="menu-btn" id="btn-rules-next" onclick="showDifficultyMenu()">Next</button>
-        </div>
-
-        <div id="startMenu" class="menu-overlay" style="display: none;">
-            <h1>Select Difficulty</h1>
-            <button class="menu-btn" id="btn-easy" onclick="selectDifficulty('easy')">Easy</button>
-            <button class="menu-btn" id="btn-medium" onclick="selectDifficulty('medium')">Medium</button>
-            <button class="menu-btn" id="btn-hard" onclick="selectDifficulty('hard')">Hard</button>
-        </div>
-
-        <div id="charMenu" class="menu-overlay" style="display: none;">
-            <h1>Choose Your Character</h1>
-            <button class="menu-btn" id="btn-char1" onclick="startGame('color', '#007BFF')">Blue Block</button>
-            <button class="menu-btn" id="btn-char2" onclick="startGame('image', '')">Ahmed</button>
-            <button class="menu-btn" id="btn-char3" onclick="startGame('color', '#6f42c1')">Purple Ninja</button>
-        </div>
-
-        <canvas id="gameCanvas" width="600" height="250" tabindex="1"></canvas>
+<div class="container">
+    <h1>Scavenger Hunt</h1>
+    
+    <div class="scores">
+        <div id="p1Box" class="player-score active-player">Player 1: <span id="p1Score">0</span></div>
+        <div id="p2Box" class="player-score">Player 2: <span id="p2Score">0</span></div>
     </div>
 
-    <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        const rulesMenu = document.getElementById("rulesMenu");
-        const startMenu = document.getElementById("startMenu");
-        const charMenu = document.getElementById("charMenu");
+    <div class="timer" id="timerDisplay">10:00</div>
 
-        canvas.focus();
+    <div id="setupScreen">
+        <h2 id="promptInstruction">Player 1: Type something for Player 2 to find!</h2>
+        <input type="text" id="itemPrompt" placeholder="e.g., A pinecone, something red...">
+        <br>
+        <button onclick="startHunt()">Set Target & Start Timer</button>
+    </div>
 
-        const ahmedImage = new Image();
-        ahmedImage.src = "character_ahmed.png"; 
-
-        let score = 0;
-        let gameOver = false;
-        let gameStarted = false; 
-        let currentDifficulty = 'medium'; 
-
-        let jumpCount = 0;
-        const maxJumps = 2; 
-
-        const player = { 
-            x: 50, 
-            y: 200, 
-            width: 30, 
-            height: 30, 
-            normalHeight: 30, 
-            duckHeight: 15,   
-            velocityY: 0, 
-            gravity: 1.0, 
-            jumpPower: -12.5,
-            moveSpeed: 6, 
-            type: "color",  
-            color: "#007BFF" 
-        };
+    <div id="huntScreen" class="hidden">
+        <h2>Target: <span id="targetItem" style="color: #e67e22;"></span></h2>
+        <p>Go find it before time runs out!</p>
         
-        const keysPressed = {
-            left: false,
-            right: false,
-            down: false
-        };
+        <label for="photoUpload" class="file-input-label">📸 Take/Upload Picture</label>
+        <input type="file" id="photoUpload" accept="image/*" capture="environment" style="display: none;" onchange="previewPhoto()">
+        
+        <br>
+        <img id="photoPreview" alt="Preview">
+        <br>
+        <button id="foundBtn" onclick="itemFound()" style="background: #2ecc71; display: none;">Found It! (+10 pts)</button>
+    </div>
 
-        const obstacles = [];
-        const coins = []; 
-        let gameSpeed = 5;
-        let baseSpeed = 5; 
+    <div id="winScreen" class="hidden">
+        <h2 id="winnerMessage" style="color: #2ecc71;"></h2>
+        <button onclick="resetGame()">Play Again</button>
+    </div>
+</div>
 
-        // --- GAME CONTROLS ---
-        document.addEventListener("keydown", function(event) {
-            if (event.code === "Space") {
-                if (gameOver) {
-                    resetGame();
-                } else if (gameStarted && jumpCount < maxJumps && !keysPressed.down) {
-                    player.velocityY = player.jumpPower;
-                    jumpCount++; 
-                }
-            }
-            
-            if (event.code === "ArrowLeft" || event.code === "KeyA") {
-                keysPressed.left = true;
-            }
-            if (event.code === "ArrowRight" || event.code === "KeyD") {
-                keysPressed.right = true;
-            }
-            if (event.code === "ArrowDown" || event.code === "KeyS") {
-                keysPressed.down = true;
-            }
-        });
+<script>
+    let scores = { 1: 0, 2: 0 };
+    let giver = 1;   // Person choosing the item
+    let hunter = 2;  // Person finding the item
+    let timer;
+    let timeLeft = 600; // 10 minutes in seconds
 
-        document.addEventListener("keyup", function(event) {
-            if (event.code === "ArrowLeft" || event.code === "KeyA") {
-                keysPressed.left = false;
-            }
-            if (event.code === "ArrowRight" || event.code === "KeyD") {
-                keysPressed.right = false;
-            }
-            if (event.code === "ArrowDown" || event.code === "KeyS") {
-                keysPressed.down = false;
-            }
-        });
-
-        // --- FIXED MENU TRANSITIONS ---
-        function showDifficultyMenu() {
-            rulesMenu.style.display = "none";
-            startMenu.style.display = "flex";
-            charMenu.style.display = "none";
+    function startHunt() {
+        const itemInput = document.getElementById('itemPrompt');
+        if (itemInput.value.trim() === "") {
+            alert("Please type an item first!");
+            return;
         }
 
-        function selectDifficulty(difficulty) {
-            currentDifficulty = difficulty; 
+        // Set target text
+        document.getElementById('targetItem').innerText = itemInput.value;
+        itemInput.value = ""; // Clear input
 
-            if (difficulty === 'easy') {
-                baseSpeed = 4;
-                player.gravity = 0.8; 
-            } else if (difficulty === 'medium') {
-                baseSpeed = 5.5;
-                player.gravity = 1.0; 
-            } else if (difficulty === 'hard') {
-                baseSpeed = 7.5;
-                player.gravity = 1.3; 
+        // Switch screens
+        document.getElementById('setupScreen').classList.add('hidden');
+        document.getElementById('huntScreen').classList.remove('hidden');
+
+        // Start 10-minute timer
+        timeLeft = 600;
+        updateTimerDisplay();
+        clearInterval(timer);
+        timer = setInterval(countDown, 1000);
+    }
+
+    function countDown() {
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            alert("Time's up! Switching turns.");
+            switchTurns();
+        } else {
+            timeLeft--;
+            updateTimerDisplay();
+        }
+    }
+
+    function updateTimerDisplay() {
+        let minutes = Math.floor(timeLeft / 60);
+        let seconds = timeLeft % 60;
+        if (seconds < 10) seconds = "0" + seconds;
+        document.getElementById('timerDisplay').innerText = `${minutes}:${seconds}`;
+    }
+
+    function previewPhoto() {
+        const file = document.getElementById('photoUpload').files[0];
+        const preview = document.getElementById('photoPreview');
+        const foundBtn = document.getElementById('foundBtn');
+        
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.style.display = "inline-block";
+                foundBtn.style.display = "inline-block"; // Show the claim points button
             }
+            reader.readAsDataURL(file);
+        }
+    }
 
-            rulesMenu.style.display = "none";
-            startMenu.style.display = "none";
-            charMenu.style.display = "flex";
+    function itemFound() {
+        clearInterval(timer);
+        
+        // Award 10 points to the hunter
+        scores[hunter] += 10;
+        document.getElementById(`p${hunter}Score`).innerText = scores[hunter];
+
+        // Check win condition
+        if (scores[hunter] >= 100) {
+            endGame(`Player ${hunter} Wins the Game!`);
+            return;
         }
 
-        function startGame(charType, chosenColor) {
-            player.type = charType;
-            if (charType === 'color') {
-                player.color = chosenColor;
-            }
+        alert(`Nice! Player ${hunter} gets 10 points.`);
+        switchTurns();
+    }
 
-            rulesMenu.style.display = "none";
-            startMenu.style.display = "none";
-            charMenu.style.display = "none";
-            
-            gameStarted = true;
-            canvas.focus(); 
-            resetGame();
-        }
+    function switchTurns() {
+        // Swap hunter and giver roles
+        let temp = giver;
+        giver = hunter;
+        hunter = temp;
 
-        function spawnObstacle() {
-            let obstaclePool = ['jump', 'dodge'];
-            if (currentDifficulty === 'hard') {
-                obstaclePool.push('duck');
-            }
+        // Update CSS highlights on scoreboard
+        document.getElementById(`p${giver}Box`).classList.add('active-player');
+        document.getElementById(`p${hunter}Box`).classList.remove('active-player');
 
-            const chosenType = obstaclePool[Math.floor(Math.random() * obstaclePool.length)];
+        // Update text for the setup screen
+        document.getElementById('promptInstruction').innerText = `Player ${giver}: Type something for Player ${hunter} to find!`;
 
-            if (chosenType === 'duck' && currentDifficulty === 'hard') {
-                obstacles.push({
-                    x: canvas.width,
-                    y: 0, 
-                    width: 40,
-                    height: 185, 
-                    type: 'duck',
-                    color: "#9B59B6" 
-                });
-            } 
-            else if (chosenType === 'dodge' && currentDifficulty !== 'easy') {
-                const leaveGapOnLeft = Math.random() > 0.5;
-                let obstacleWidth = 420; 
-                let xPosition = leaveGapOnLeft ? 180 : 0; 
+        // Reset UI elements
+        document.getElementById('photoPreview').style.display = "none";
+        document.getElementById('photoUpload').value = "";
+        document.getElementById('foundBtn').style.display = "none";
+        document.getElementById('timerDisplay').innerText = "10:00";
 
-                obstacles.push({
-                    x: canvas.width + xPosition,
-                    y: 90, 
-                    width: obstacleWidth,
-                    height: 25,
-                    type: 'dodge',
-                    color: "#E67E22" 
-                });
-            } 
-            else {
-                let width = 20 + Math.random() * 20;
-                let height = 30;
+        // Bring back setup screen
+        document.getElementById('huntScreen').classList.add('hidden');
+        document.getElementById('setupScreen').classList.remove('hidden');
+    }
 
-                if (currentDifficulty === 'easy') {
-                    height = 20 + Math.random() * 15; 
-                } else if (currentDifficulty === 'medium') {
-                    const isTall = Math.random() > 0.5;
-                    height = isTall ? (45 + Math.random() * 10) : (25 + Math.random() * 10);
-                } else if (currentDifficulty === 'hard') {
-                    height = 60 + Math.random() * 15;
-                }
-                
-                obstacles.push({ 
-                    x: canvas.width, 
-                    y: 230 - height, 
-                    width: width, 
-                    height: height,
-                    type: 'jump',
-                    color: "#DC3545" 
-                });
-            }
-        }
+    function endGame(message) {
+        document.getElementById('huntScreen').classList.add('hidden');
+        document.getElementById('setupScreen').classList.add('hidden');
+        document.getElementById('winScreen').classList.remove('hidden');
+        document.getElementById('winnerMessage').innerText = message;
+    }
 
-        function spawnCoin() {
-            const isHigh = Math.random() > 0.5;
-            const yPos = isHigh ? (40 + Math.random() * 30) : (120 + Math.random() * 40); 
-            
-            coins.push({
-                x: canvas.width,
-                y: yPos,
-                radius: 10,
-                collected: false
-            });
-        }
+    function resetGame() {
+        scores = { 1: 0, 2: 0 };
+        giver = 1;
+        hunter = 2;
+        document.getElementById('p1Score').innerText = "0";
+        document.getElementById('p2Score').innerText = "0";
+        document.getElementById('p1Box').classList.add('active-player');
+        document.getElementById('p2Box').classList.remove('active-player');
+        document.getElementById('promptInstruction').innerText = "Player 1: Type something for Player 2 to find!";
+        document.getElementById('winScreen').classList.add('hidden');
+        document.getElementById('setupScreen').classList.remove('hidden');
+        document.getElementById('timerDisplay').innerText = "10:00";
+    }
+</script>
 
-        function resetGame() {
-            obstacles.length = 0;
-            coins.length = 0; 
-            score = 0;
-            gameOver = false;
-            player.y = 200;
-            player.x = 50; 
-            player.height = player.normalHeight;
-            player.velocityY = 0;
-            jumpCount = 0; 
-            gameSpeed = baseSpeed; 
-            keysPressed.left = false;
-            keysPressed.right = false;
-            keysPressed.down = false;
-            canvas.focus();
-        }
-
-        function updateLogic() {
-            if (!gameStarted || gameOver) return; 
-
-            if (keysPressed.down && player.y === (230 - player.normalHeight)) {
-                player.height = player.duckHeight;
-            } else {
-                player.height = player.normalHeight;
-            }
-
-            player.velocityY += player.gravity;
-            player.y += player.velocityY;
-
-            let floorY = 230 - player.height;
-            if (player.y >= floorY) {
-                player.y = floorY;
-                player.velocityY = 0;
-                jumpCount = 0; 
-            }
-
-            if (keysPressed.left) {
-                player.x -= player.moveSpeed;
-            }
-            if (keysPressed.right) {
-                player.x += player.moveSpeed;
-            }
-
-            if (player.x < 0) player.x = 0;
-            if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
-
-            for (let i = 0; i < obstacles.length; i++) {
-                obstacles[i].x -= gameSpeed;
-
-                if (player.x < obstacles[i].x + obstacles[i].width &&
-                    player.x + player.width > obstacles[i].x &&
-                    player.y < obstacles[i].y + obstacles[i].height &&
-                    player.y + player.height > obstacles[i].y) {
-                    gameOver = true;
-                }
-            }
-
-            for (let i = 0; i < coins.length; i++) {
-                coins[i].x -= gameSpeed;
-
-                let distX = Math.abs(coins[i].x - (player.x + player.width / 2));
-                let distY = Math.abs(coins[i].y - (player.y + player.height / 2));
-
-                if (distX <= (player.width / 2 + coins[i].radius) && distY <= (player.height / 2 + coins[i].radius)) {
-                    if (!coins[i].collected) {
-                        coins[i].collected = true;
-                        score += 50; 
-                    }
-                }
-            }
-
-            for (let i = coins.length - 1; i >= 0; i--) {
-                if (coins[i].x < -20 || coins[i].collected) {
-                    coins.splice(i, 1);
-                }
-            }
-
-            if (obstacles.length > 0 && obstacles[0].x < -600) { 
-                obstacles.shift();
-                score += 10; 
-                if (score % 50 === 0) {
-                    gameSpeed += 0.5; 
-                }
-            }
-
-            if (Math.random() < 0.02) {
-                if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 280) {
-                    spawnObstacle();
-                }
-            }
-
-            if (Math.random() < 0.015) { 
-                spawnCoin();
-            }
-        }
-
-        function drawGraphics() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Ground
-            ctx.fillStyle = "#555";
-            ctx.fillRect(0, 230, canvas.width, 20);
-
-            // Player character
-            if (player.type === "image") {
-                ctx.drawImage(ahmedImage, player.x, player.y, player.width, player.height);
-            } else {
-                ctx.fillStyle = player.color; 
-                ctx.fillRect(player.x, player.y, player.width, player.height);
-            }
-
-            // Obstacles
-            for (let i = 0; i < obstacles.length; i++) {
-                ctx.fillStyle = obstacles[i].color; 
-                ctx.fillRect(obstacles[i].x, obstacles[i].y, obstacles[i].width, obstacles[i].height);
-            }
-
-            // Coins
-            ctx.fillStyle = "#FFD700"; 
-            for (let i = 0; i < coins.length; i++) {
-                ctx.beginPath();
-                ctx.arc(coins[i].x, coins[i].y, coins[i].radius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.closePath();
-            }
-
-            // Score
-            ctx.fillStyle = "#333";
-            ctx.font = "bold 20px sans-serif";
-            ctx.fillText("Score: " + score, 20, 35);
-
-            if (gameOver) {
-                ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                ctx.fillStyle = "white";
-                ctx.font = "bold 36px sans-serif";
-                ctx.textAlign = "center";
-                ctx.fillText("GAME OVER!", canvas.width / 2, canvas.height / 2 - 10);
-                
-                ctx.font = "20px sans-serif";
-                ctx.fillText("Press SPACE to Restart", canvas.width / 2, canvas.height / 2 + 30);
-                
-                ctx.font = "14px sans-serif";
-                ctx.fillStyle = "#ccc";
-                ctx.fillText("(Refresh the page to change settings)", canvas.width / 2, canvas.height / 2 + 60);
-                
-                ctx.textAlign = "left"; 
-            }
-        }
-
-        function gameLoop() {
-            updateLogic();
-            drawGraphics();
-            requestAnimationFrame(gameLoop);
-        }
-
-        gameLoop();
-    </script>
 </body>
 </html>
