@@ -64,16 +64,23 @@
             margin-bottom: 5px;
         }
 
+        /* 3x3 Grid Layout for Character Selection */
+        .char-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            max-width: 550px;
+        }
+
         .menu-btn {
             color: white;
             border: none;
-            padding: 10px 20px;
-            margin: 5px;
-            font-size: 16px;
+            padding: 8px 15px;
+            font-size: 13px;
             font-weight: bold;
             border-radius: 5px;
             cursor: pointer;
-            width: 180px;
+            width: 150px;
             transition: 0.2s;
         }
 
@@ -81,19 +88,27 @@
             transform: scale(1.05);
         }
 
-        #btn-rules-next { background-color: #007BFF; }
+        /* Base UI Buttons */
+        #btn-rules-next { background-color: #007BFF; width: 180px; }
         #btn-rules-next:hover { background-color: #0056b3; }
 
-        #btn-easy { background-color: #28a745; }
+        #btn-easy { background-color: #28a745; width: 180px; margin: 5px; }
         #btn-easy:hover { background-color: #1e7e34; }
-        #btn-medium { background-color: #007BFF; }
+        #btn-medium { background-color: #007BFF; width: 180px; margin: 5px; }
         #btn-medium:hover { background-color: #0056b3; }
-        #btn-hard { background-color: #DC3545; }
+        #btn-hard { background-color: #DC3545; width: 180px; margin: 5px; }
         #btn-hard:hover { background-color: #bd2130; }
 
+        /* Character Button Styles */
         #btn-char1 { background-color: #007BFF; }
         #btn-char2 { background-color: #e67e22; } 
         #btn-char3 { background-color: #6f42c1; }
+        #btn-char4 { background-color: #dc3545; } 
+        #btn-char5 { background-color: #d4af37; color: #222; } 
+        #btn-char6 { background-color: #333333; border: 1px solid #555; } 
+        #btn-char7 { background-color: #20c997; } /* Mai */
+        #btn-char8 { background-color: #fd7e14; } /* Mazin */
+        #btn-char9 { background-color: #e83e8c; } /* Malak */
     </style>
 </head>
 <body>
@@ -119,9 +134,19 @@
 
         <div id="charMenu" class="menu-overlay" style="display: none;">
             <h1>Choose Your Character</h1>
-            <button class="menu-btn" id="btn-char1" onclick="startGame('color', '#007BFF')">Blue Block</button>
-            <button class="menu-btn" id="btn-char2" onclick="startGame('image', '')">Ahmed</button>
-            <button class="menu-btn" id="btn-char3" onclick="startGame('color', '#6f42c1')">Purple Ninja</button>
+            <div class="char-grid">
+                <button class="menu-btn" id="btn-char1" onclick="startGame('color', '#007BFF')">Blue Block</button>
+                <button class="menu-btn" id="btn-char2" onclick="startGame('image', 'ahmed')">Ahmed</button>
+                <button class="menu-btn" id="btn-char3" onclick="startGame('color', '#6f42c1')">Purple Ninja</button>
+                
+                <button class="menu-btn" id="btn-char4" onclick="startGame('color', '#dc3545')">Red Flash</button>
+                <button class="menu-btn" id="btn-char5" onclick="startGame('color', '#FFD700')">Golden Hero</button>
+                <button class="menu-btn" id="btn-char6" onclick="startGame('color', '#1c1c1c')">Shadow</button>
+                
+                <button class="menu-btn" id="btn-char7" onclick="startGame('image', 'mai')">Mai</button>
+                <button class="menu-btn" id="btn-char8" onclick="startGame('image', 'mazin')">Mazin</button>
+                <button class="menu-btn" id="btn-char9" onclick="startGame('image', 'malak')">Malak</button>
+            </div>
         </div>
 
         <canvas id="gameCanvas" width="600" height="250" tabindex="1"></canvas>
@@ -136,8 +161,17 @@
 
         canvas.focus();
 
-        const ahmedImage = new Image();
-        ahmedImage.src = "character_ahmed.png"; 
+        // Preloading all custom image assets
+        const images = {
+            ahmed: new Image(),
+            mai: new Image(),
+            mazin: new Image(),
+            malak: new Image()
+        };
+        images.ahmed.src = "character_ahmed.png"; 
+        images.mai.src = "character_mai.png"; 
+        images.mazin.src = "character_mazin.png"; 
+        images.malak.src = "character_malak.png"; 
 
         let score = 0;
         let gameOver = false;
@@ -159,6 +193,7 @@
             jumpPower: -12.5,
             moveSpeed: 6, 
             type: "color",  
+            imageKey: "", // Keeps track of which preloaded image object to use
             color: "#007BFF" 
         };
         
@@ -173,45 +208,11 @@
         let gameSpeed = 5;
         let baseSpeed = 5; 
 
-        // --- GAME CONTROLS ---
-        document.addEventListener("keydown", function(event) {
-            if (event.code === "Space") {
-                if (gameOver) {
-                    resetGame();
-                } else if (gameStarted && jumpCount < maxJumps && !keysPressed.down) {
-                    player.velocityY = player.jumpPower;
-                    jumpCount++; 
-                }
-            }
-            
-            if (event.code === "ArrowLeft" || event.code === "KeyA") {
-                keysPressed.left = true;
-            }
-            if (event.code === "ArrowRight" || event.code === "KeyD") {
-                keysPressed.right = true;
-            }
-            if (event.code === "ArrowDown" || event.code === "KeyS") {
-                keysPressed.down = true;
-            }
-        });
-
-        document.addEventListener("keyup", function(event) {
-            if (event.code === "ArrowLeft" || event.code === "KeyA") {
-                keysPressed.left = false;
-            }
-            if (event.code === "ArrowRight" || event.code === "KeyD") {
-                keysPressed.right = false;
-            }
-            if (event.code === "ArrowDown" || event.code === "KeyS") {
-                keysPressed.down = false;
-            }
-        });
-
-        // --- FIXED MENU TRANSITIONS ---
+        // --- GAME FUNCTIONS ---
+        
         function showDifficultyMenu() {
             rulesMenu.style.display = "none";
             startMenu.style.display = "flex";
-            charMenu.style.display = "none";
         }
 
         function selectDifficulty(difficulty) {
@@ -228,21 +229,19 @@
                 player.gravity = 1.3; 
             }
 
-            rulesMenu.style.display = "none";
             startMenu.style.display = "none";
             charMenu.style.display = "flex";
         }
 
-        function startGame(charType, chosenColor) {
+        function startGame(charType, value) {
             player.type = charType;
             if (charType === 'color') {
-                player.color = chosenColor;
+                player.color = value;
+            } else if (charType === 'image') {
+                player.imageKey = value; // Stores 'ahmed', 'mai', 'mazin', or 'malak'
             }
 
-            rulesMenu.style.display = "none";
-            startMenu.style.display = "none";
             charMenu.style.display = "none";
-            
             gameStarted = true;
             canvas.focus(); 
             resetGame();
@@ -333,6 +332,40 @@
             canvas.focus();
         }
 
+        // --- GAME CONTROLS ---
+        document.addEventListener("keydown", function(event) {
+            if (event.code === "Space") {
+                if (gameOver) {
+                    resetGame();
+                } else if (gameStarted && jumpCount < maxJumps && !keysPressed.down) {
+                    player.velocityY = player.jumpPower;
+                    jumpCount++; 
+                }
+            }
+            
+            if (event.code === "ArrowLeft" || event.code === "KeyA") {
+                keysPressed.left = true;
+            }
+            if (event.code === "ArrowRight" || event.code === "KeyD") {
+                keysPressed.right = true;
+            }
+            if (event.code === "ArrowDown" || event.code === "KeyS") {
+                keysPressed.down = true;
+            }
+        });
+
+        document.addEventListener("keyup", function(event) {
+            if (event.code === "ArrowLeft" || event.code === "KeyA") {
+                keysPressed.left = false;
+            }
+            if (event.code === "ArrowRight" || event.code === "KeyD") {
+                keysPressed.right = false;
+            }
+            if (event.code === "ArrowDown" || event.code === "KeyS") {
+                keysPressed.down = false;
+            }
+        });
+
         function updateLogic() {
             if (!gameStarted || gameOver) return; 
 
@@ -419,9 +452,10 @@
             ctx.fillStyle = "#555";
             ctx.fillRect(0, 230, canvas.width, 20);
 
-            // Player character
+            // Render Player (Checks if it needs to draw a preloaded image asset)
             if (player.type === "image") {
-                ctx.drawImage(ahmedImage, player.x, player.y, player.width, player.height);
+                const activeImg = images[player.imageKey];
+                ctx.drawImage(activeImg, player.x, player.y, player.width, player.height);
             } else {
                 ctx.fillStyle = player.color; 
                 ctx.fillRect(player.x, player.y, player.width, player.height);
