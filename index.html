@@ -1,4 +1,4 @@
-vvvvvv<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -92,7 +92,7 @@ vvvvvv<!DOCTYPE html>
         #btn-hard:hover { background-color: #bd2130; }
 
         #btn-char1 { background-color: #007BFF; }
-        #btn-char2 { background-color: #e67e22; } /* Ahmed character button style */
+        #btn-char2 { background-color: #e67e22; } 
         #btn-char3 { background-color: #6f42c1; }
     </style>
 </head>
@@ -136,7 +136,6 @@ vvvvvv<!DOCTYPE html>
 
         canvas.focus();
 
-        // NEW: Preload the custom image asset
         const ahmedImage = new Image();
         ahmedImage.src = "character_ahmed.png"; 
 
@@ -159,7 +158,7 @@ vvvvvv<!DOCTYPE html>
             gravity: 1.0, 
             jumpPower: -12.5,
             moveSpeed: 6, 
-            type: "color",  // NEW: Tracks if player asset is a solid color or custom image
+            type: "color",  
             color: "#007BFF" 
         };
         
@@ -208,10 +207,11 @@ vvvvvv<!DOCTYPE html>
             }
         });
 
-        // --- GAME FUNCTIONS ---
+        // --- FIXED MENU TRANSITIONS ---
         function showDifficultyMenu() {
             rulesMenu.style.display = "none";
             startMenu.style.display = "flex";
+            charMenu.style.display = "none";
         }
 
         function selectDifficulty(difficulty) {
@@ -228,18 +228,21 @@ vvvvvv<!DOCTYPE html>
                 player.gravity = 1.3; 
             }
 
+            rulesMenu.style.display = "none";
             startMenu.style.display = "none";
             charMenu.style.display = "flex";
         }
 
-        // UPDATED: Now accepts mode ('color' or 'image') and values accordingly
         function startGame(charType, chosenColor) {
             player.type = charType;
             if (charType === 'color') {
                 player.color = chosenColor;
             }
 
+            rulesMenu.style.display = "none";
+            startMenu.style.display = "none";
             charMenu.style.display = "none";
+            
             gameStarted = true;
             canvas.focus(); 
             resetGame();
@@ -399,4 +402,78 @@ vvvvvv<!DOCTYPE html>
             }
 
             if (Math.random() < 0.02) {
-                if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 280)vv
+                if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 280) {
+                    spawnObstacle();
+                }
+            }
+
+            if (Math.random() < 0.015) { 
+                spawnCoin();
+            }
+        }
+
+        function drawGraphics() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Ground
+            ctx.fillStyle = "#555";
+            ctx.fillRect(0, 230, canvas.width, 20);
+
+            // Player character
+            if (player.type === "image") {
+                ctx.drawImage(ahmedImage, player.x, player.y, player.width, player.height);
+            } else {
+                ctx.fillStyle = player.color; 
+                ctx.fillRect(player.x, player.y, player.width, player.height);
+            }
+
+            // Obstacles
+            for (let i = 0; i < obstacles.length; i++) {
+                ctx.fillStyle = obstacles[i].color; 
+                ctx.fillRect(obstacles[i].x, obstacles[i].y, obstacles[i].width, obstacles[i].height);
+            }
+
+            // Coins
+            ctx.fillStyle = "#FFD700"; 
+            for (let i = 0; i < coins.length; i++) {
+                ctx.beginPath();
+                ctx.arc(coins[i].x, coins[i].y, coins[i].radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.closePath();
+            }
+
+            // Score
+            ctx.fillStyle = "#333";
+            ctx.font = "bold 20px sans-serif";
+            ctx.fillText("Score: " + score, 20, 35);
+
+            if (gameOver) {
+                ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = "white";
+                ctx.font = "bold 36px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText("GAME OVER!", canvas.width / 2, canvas.height / 2 - 10);
+                
+                ctx.font = "20px sans-serif";
+                ctx.fillText("Press SPACE to Restart", canvas.width / 2, canvas.height / 2 + 30);
+                
+                ctx.font = "14px sans-serif";
+                ctx.fillStyle = "#ccc";
+                ctx.fillText("(Refresh the page to change settings)", canvas.width / 2, canvas.height / 2 + 60);
+                
+                ctx.textAlign = "left"; 
+            }
+        }
+
+        function gameLoop() {
+            updateLogic();
+            drawGraphics();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
